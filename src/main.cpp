@@ -9,6 +9,9 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "spline.h"
+#include "trajectory.h"
+#include "behavior.h"
+#include "prediction.h"
 
 using namespace std;
 

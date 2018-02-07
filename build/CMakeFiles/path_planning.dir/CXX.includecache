@@ -772,6 +772,8 @@ lapacke_mangling.h
 
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/src/plugins/MatrixCwiseUnaryOps.h
 
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/behavior.h
+
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/json.hpp
 algorithm
 -
@@ -851,6 +853,14 @@ json.hpp
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/json.hpp
 spline.h
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/spline.h
+trajectory.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/trajectory.h
+behavior.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/behavior.h
+prediction.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/prediction.h
+
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/prediction.h
 
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/spline.h
 cstdio
@@ -861,6 +871,8 @@ vector
 -
 algorithm
 -
+
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/trajectory.h
 
 /usr/local/include/pthread-barrier.h
 errno.h
