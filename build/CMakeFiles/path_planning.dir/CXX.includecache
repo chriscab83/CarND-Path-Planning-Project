@@ -6,6 +6,10 @@
 
 #IncludeRegexTransform: 
 
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Ego.h
+Vehicle.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Vehicle.h
+
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/Cholesky
 Core
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/Core
@@ -772,7 +776,17 @@ lapacke_mangling.h
 
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/src/plugins/MatrixCwiseUnaryOps.h
 
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/behavior.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Scene.h
+vector
+-
+iostream
+-
+Vehicle.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Vehicle.h
+
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Vehicle.h
+iostream
+-
 
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/json.hpp
 algorithm
@@ -845,6 +859,8 @@ thread
 -
 vector
 -
+ctime
+-
 Eigen-3.3/Eigen/Core
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/Core
 Eigen-3.3/Eigen/QR
@@ -853,14 +869,12 @@ json.hpp
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/json.hpp
 spline.h
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/spline.h
-trajectory.h
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/trajectory.h
-behavior.h
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/behavior.h
-prediction.h
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/prediction.h
-
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/prediction.h
+Vehicle.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Vehicle.h
+Ego.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Ego.h
+Scene.h
+/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Scene.h
 
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/spline.h
 cstdio
@@ -871,8 +885,6 @@ vector
 -
 algorithm
 -
-
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/trajectory.h
 
 /usr/local/include/pthread-barrier.h
 errno.h
