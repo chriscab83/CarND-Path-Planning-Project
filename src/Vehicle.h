@@ -10,14 +10,24 @@ using namespace std;
 
 struct Vehicle {
 
+  bool is_valid;
+
   double speed, s;
   int lane;
 
-  double range_to_ego, speed_diff_ego;
-
+  double range;
 
   bool operator < (const Vehicle& str) const {
-    return (range_to_ego < str.range_to_ego); 
+    return (range < str.range); 
+  }
+
+  void print(ostream& os) {
+    os << left << setw(10) << setfill(' ') << is_valid
+       << left << setw(10) << setfill(' ') << speed
+       << left << setw(10) << setfill(' ') << s
+       << left << setw(10) << setfill(' ') << lane
+       << left << setw(10) << setfill(' ') << range
+       << endl;
   }
 
 };

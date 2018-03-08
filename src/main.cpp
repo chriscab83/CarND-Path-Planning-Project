@@ -12,7 +12,6 @@
 #include "spline.h"
 #include "Vehicle.h"
 #include "Ego.h"
-#include "Scene.h"
 
 using namespace std;
 
@@ -22,6 +21,8 @@ using namespace std;
 // ---------------------------------------------------------------------
 
 const double EPSILON = 0.000001;
+
+const double COST_STOP = 0.75;
 
 const double MAX_VEL = 49.5;
 const double MAX_ACCEL = .224;
@@ -199,6 +200,7 @@ string hasData(string s) {
   return "";
 }
 
+int lane_change_count = 0;
 int main() {
   uWS::Hub h;
 
@@ -236,15 +238,14 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  unsigned long last_lane_change = 0;
-
-  Ego ego;
-  ego.desired_lane = 1;
-  ego.desired_speed = 0;
   int cnt = 0;
+  double ref_vel = 0;
+  int lane = 1;
 
+  Vehicle forward[3];
+  Vehicle behind[3];
   h.onMessage(
-      [&cnt, &ego, &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy]
+      [&forward, &behind, &cnt, &ref_vel, &lane, &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy]
       (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -270,6 +271,7 @@ int main() {
           	double car_d = j[1]["d"];
           	double car_yaw = j[1]["yaw"];
           	double car_speed = j[1]["speed"];
+            int car_lane = round((car_d-2)/4);
 
           	// Previous path data given to the Planner
           	auto previous_path_x = j[1]["previous_path_x"];
@@ -292,101 +294,146 @@ int main() {
               car_s = end_path_s;
             }
 
-            ego.speed = car_speed;
-            ego.s = car_s;
-            ego.lane = round((car_d-2)/4);
+            // track lane change completion.
+            if (lane_change_count > 0) --lane_change_count;
 
-            Scene scene;
+            // reset vehicle holders for vehicles closest to ego
+            for (int i = 0; i < 3; ++i) {
+              forward[i].is_valid = false;
+              behind[i].is_valid = false;
+            }
+
+            // holds closest vehicles in front and behind ego car.
+
             for (int i = 0; i < sensor_fusion.size(); ++i) {
               float d = sensor_fusion[i][6];
+              int check_lane = round((d-2)/4);
+
               double vx = sensor_fusion[i][3];
               double vy = sensor_fusion[i][4];
               double check_speed = sqrt(vx*vx + vy*vy);
               double check_car_s = sensor_fusion[i][5];
               check_car_s += ((double)prev_size*0.02*check_speed);
 
-              if (check_speed <= 0) continue;
+              if (d < 0) continue;
 
-              Vehicle v;
-              v.speed = check_speed * 2.24;
-              v.s = check_car_s;
-              v.lane = round((d-2)/4);
-              v.range_to_ego = (v.s-ego.s);
-              v.speed_diff_ego = (ego.speed - v.speed);
+              double range = check_car_s - car_s;
 
-              scene.add_vehicle(v);
+              if (range >= 0)
+              {
+                if (!forward[check_lane].is_valid || range < forward[check_lane].range) {
+                  forward[check_lane].is_valid = true;
+                  forward[check_lane].speed = check_speed * 2.24;
+                  forward[check_lane].s = check_car_s;
+                  forward[check_lane].lane = check_lane;
+                  forward[check_lane].range = range;
+                }
+              }
+              else 
+              {
+                if (!behind[check_lane].is_valid || range < behind[check_lane].range) {
+                  behind[check_lane].is_valid = true;
+                  behind[check_lane].speed = check_speed * 2.24;
+                  behind[check_lane].s = check_car_s;
+                  behind[check_lane].lane = check_lane;
+                  behind[check_lane].range = range;
+                }
+              }
             }
 
-            // scene.print_lane(cout, ego.lane);
+            // clear lane, drive max speed
+            if (!forward[lane].is_valid || forward[lane].range > 30) 
+            {
+              if (ref_vel < MAX_VEL) ref_vel += MAX_ACCEL;
+            }
+            // too close to car in front, check for other options
+            else 
+            {
+              // { keep_lane, change_left, change_right }
+              double costs[3] = { 0, .05, .05 }; 
+
+              // calc keep_lane cost
+              // speed cost
+              costs[0] += COST_STOP * ((MAX_VEL-forward[lane].speed)/MAX_VEL);
+
+
+              // calc change_left cost
+              if (lane == 0 || lane_change_count > 0) {
+                costs[1] = 1.0; // cant change lane, in left lane.
+              } 
+              else {
+                if (forward[lane-1].is_valid && forward[lane-1].range < 15) {
+                  costs[1] = 1.0; // too close to change.
+                }
+                else if (behind[lane-1].is_valid && abs(behind[lane-1].range) < 25) {
+                  costs[1] = 1.0; // too close to change.
+                }
+                else 
+                {
+                  if (forward[lane-1].is_valid && forward[lane-1].range < 30)
+                  {
+                    // speed cost
+                    costs[1] += COST_STOP * ((MAX_VEL-forward[lane-1].speed)/MAX_VEL);
+                  }
+                }
+              }
+
+              // calc change_right cost
+              if (lane == 2 || lane_change_count > 0) {
+                costs[2] = 1.0; // cant change lane, in right lane.
+              }
+              else {
+                if (forward[lane+1].is_valid && forward[lane+1].range < 15) {
+                  costs[2] = 1.0; // too close to change.
+                }
+                else if (behind[lane+1].is_valid && abs(behind[lane+1].range) < 30) {
+                  costs[2] = 1.0; // too close to change.
+                }
+                else
+                {
+                  if (forward[lane+1].is_valid && forward[lane+1].range < 30) {
+                    // speed cost
+                    costs[2] += COST_STOP * ((MAX_VEL-forward[lane+1].speed)/MAX_VEL);
+                  }
+                }
+              }
+
+              int choice = 0;
+              for (int i = 1; i < 3; ++i) {
+                if (costs[i] < costs[choice]) choice = i;
+              }
+
+              for (int i = 0; i < 3; ++i) 
+                cout << left << setw(10) << setfill(' ') << costs[i];
+              cout << endl;
+
+              switch(choice) 
+              {
+                case 0:   // keep_lane
+                  cout << "KEEP_LANE\n\n";
+                  ref_vel -= min(MAX_ACCEL, ref_vel-forward[0].speed);
+                  break;
+
+                case 1:   // change_left
+                  cout << "CHANGE_LEFT\n\n";
+                  --lane;
+                  lane_change_count = 30;
+                  break;
+
+                case 2:   // change_right
+                  cout << "CHANGE_RIGHT\n\n";
+                  ++lane;
+                  lane_change_count = 30;
+                  break;
+              }
+            }
+
 
 // ---------------------------------------------------------------------
 // behavior
 // ---------------------------------------------------------------------
 
-            /*
-            bool too_close = false;
-            bool can_change_left = ego.lane != 0;
-            bool can_change_right = ego.lane != 2;
 
-            double blocking_range = 100.0;
-            double blocking_vel = 100.0;
-
-            vector<double> vels;
-            for (int i = 0; i < sensor_fusion.size(); ++i) {
-              float d = sensor_fusion[i][6];
-              double vx = sensor_fusion[i][3];
-              double vy = sensor_fusion[i][4];
-              double check_speed = sqrt(vx*vx + vy*vy);
-              double check_car_s = sensor_fusion[i][5];
-              check_car_s += ((double)prev_size*0.02*check_speed);
-
-              // is car in my lane
-              if (d < (2+4*ego.lane+2) && d > (2+4*ego.lane-2)) { 
-                double range = check_car_s - car_s;
-                if (check_car_s > car_s && range < 30) {
-                  if (range < blocking_range) {
-                    blocking_range = range;
-                    blocking_vel = check_speed * 2.24;
-                  }
-                  // too close, take action.
-                  too_close = true;
-                }
-              }
-              // car in left lane
-              else if (ego.lane != 0 && d < (2+4*(ego.lane-1)+2) && d > (2+4*(ego.lane-1)-2)) {
-                double range = check_car_s - car_s;
-                if (abs(range) < 30) {
-                  can_change_left = false;
-                }
-              }
-              // car in right lane
-              else if (ego.lane != 2 && d < (2+4*(ego.lane+1)+2) && d > (2+4*(ego.lane+1)-2)) {
-                double range = check_car_s - car_s;
-                if (abs(range) < 30) {
-                  can_change_left = false;
-                }
-              }
-            }
-
-            if (too_close && (blocking_vel < car_speed || blocking_range < 20)) {
-              double vel_change = MAX_ACCEL;
-
-              if (blocking_range >= 20) {
-                vel_change = min(car_speed - blocking_vel, MAX_ACCEL);
-              }
-
-              // ref_vel -= vel_change;
-              ego.desired_speed -= vel_change;
-
-              // todo: try to change lane
-              if (can_change_left) --ego.lane;
-              else if (can_change_right) ++ego.lane;
-            }
-            else if (ego.desired_speed < MAX_VEL) {
-              // ref_vel += MAX_ACCEL;
-              ego.desired_speed += MAX_ACCEL;
-            }
-            // */
 
 // ---------------------------------------------------------------------
 // trajectory
@@ -437,9 +484,9 @@ int main() {
             }
 
             // add to the spline points the vehicles goal position at 30, 60, and 90 meters out.
-            vector<double> next_wp0 = getXY(car_s+30, (2+4*ego.desired_lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            vector<double> next_wp1 = getXY(car_s+60, (2+4*ego.desired_lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            vector<double> next_wp2 = getXY(car_s+90, (2+4*ego.desired_lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp0 = getXY(car_s+30, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp1 = getXY(car_s+60, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp2 = getXY(car_s+90, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
             ptsx.push_back(next_wp0[0]);
             ptsx.push_back(next_wp1[0]);
@@ -470,7 +517,7 @@ int main() {
             double x_add_on = 0;
 
             for (int i = 1; i < 50-previous_path_x.size(); ++i) {
-              double N = target_dist / (0.02 * ego.desired_speed / 2.24);
+              double N = target_dist / (0.02 * ref_vel / 2.24);
               double x_point = x_add_on + (target_x / N);
               double y_point = s(x_point);
 

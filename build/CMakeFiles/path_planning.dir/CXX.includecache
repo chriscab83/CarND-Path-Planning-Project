@@ -776,14 +776,6 @@ lapacke_mangling.h
 
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Eigen-3.3/Eigen/src/plugins/MatrixCwiseUnaryOps.h
 
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Scene.h
-vector
--
-iostream
--
-Vehicle.h
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Vehicle.h
-
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Vehicle.h
 iostream
 -
@@ -873,8 +865,6 @@ Vehicle.h
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Vehicle.h
 Ego.h
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Ego.h
-Scene.h
-/Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/Scene.h
 
 /Users/christophercabrera/workspace/CarND-Path-Planning-Project/src/spline.h
 cstdio
