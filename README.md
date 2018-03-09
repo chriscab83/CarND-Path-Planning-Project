@@ -1,7 +1,40 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
+
+----
+
+## How it works
+The path planner application was designed to work in tandem with Udacity's term 3 simulator which runs the path planning project. The application receives details from simulated sensors from the path planning project simulator and makes decisions to autonomously drive a vehicle around a highway track while keeping in a desired lane, avoiding other traffic, and making safe driving decisions to optimize travel. This process is done in three steps, namely: state prediction, behavior planning, and trajectory planning. 
+
+#### State Prediction [(lines 297 - 347)](./src/main.cpp#L297)
+State prediction is done by looping through each vehicle returned in the simulator's sensor fusion vector. For each vehicle, the current `s` value is updated to represent the vehicle's future `s'` state by adding in the product of the vehicle's speed, 0.02 (the time in seconds between simulator callbacks), and how many steps in the future we want to look. 
+```
+s' = s + (steps_ahead * 0.02 * speed)
+```
+Using this future state, in [lines 324-345](./src/main.cpp#L324), we compare to the other vehicles and fill state vectors to find the closest vehicles in front of and behind the ego vehicle in each lane to be used in the behavior planning portion of the path planner. 
+
+It would be possible to improve this state prediction algorithm by implementing state over time tracking to get vehicle acceleration data from the time-series sensor results. This acceleration data could be used along with current speed in the `s'` calculation to better predict the future state of the vehicles of interest.
+
+#### Behavior Planning [(lines 348 - 450)](./src/main.cpp#L348)
+The behavior planning algorithm is implemented by doing cost base analysis on the different action options that are available to the ego vehicle. First, the alogorithm checks the forward vector for the ego's current lane to find if there is a vehicle in that lane within 30 meters in front of the ego vehicle, if the lane is free, the ego vehicle will stay in it's current lane and accelerate at a safe speed to a maximum of about 49.5 mph. If the lane is blocked, the algo iterates over three actions calculating the cost of taking those actions. These actions include, slow down and keep lane, change lane to the right, or change lane to the left. The main cost function applied to all three actions is the speed the ego vehicle would be able to achieve safely in the target lane after committing the action. This is done by multiplying the cost to completely stop the ego vehicle, set to 0.75, by the percent of the max speed we can travel in that lane.
+```
+cost = COST_STOP * ((MAX_VEL-forward[lane].speed)/MAX_VEL)
+```
+If it is not safe to change a lane to the left or right, for instance if a vehicle is within a buffer zone in front of or behind the ego in that lane or if making a change in that direction would leave the road, that actions cost is set to the max cost so that action is not taken.  
+
+The alogrithm then loops over the calculated costs to find the lowest cost action. In case of a tie in actions, the choice is made by the order the costs are looped over because the choice is only changed if a cost is less than the current choices cost. The order this is done in is: keep same lane, change lane left, and finally change lane right.
+
+With the best option calculated, the planner makes changes to the variables used by the trajectory planner to best follow the desired action.  In the case of keeping the same lane, the vehicle will change the desired ego velocity by reducing it until it matches the lead vehicles speed and has a buffer of at least 20 meters from the lead vehicle.  If the desired action is to change lanes the desired lane value is updated to initiat the lane change. Along with the lane change a step count is initiated to make sure that the ego vehicle will not initiate another lane change until the current one is complete.
+
+#### Trajectory Planning [(lines 452 - 554)](./src/main.cpp#L452)
+
+Trajectory planning was done using the spline library to calculate smooth transitions between waypoints. This is done by taking the last two points from the previously planned path and adding them as the first two points to be used in the spline plotter. Next, three new waypoints are added to the vector at 30, 60, and 90 meters out from the end of the vehicles currently planned path. These waypoints are calculated using the vehicles desired lane from the behavior planner along with the ego's last `s` value in it's previous path. These vectors are fed into the spline plotter to plot a smooth path between all of the points.
+
+The planner then takes the currently planned path yet to be executed and appends new waypoints taken from the smoothed spline plotter to a max of 30 meters out from the vehicles current position to give a smoothed trajectory that follows the desired path.
+
+----
    
-### Simulator.
+### Simulator
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
 
 ### Goals
