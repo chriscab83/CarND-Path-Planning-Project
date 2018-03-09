@@ -306,6 +306,7 @@ int main() {
             // holds closest vehicles in front and behind ego car.
 
             for (int i = 0; i < sensor_fusion.size(); ++i) {
+              int id = sensor_fusion[i][0];
               float d = sensor_fusion[i][6];
               int check_lane = round((d-2)/4);
 
@@ -322,6 +323,7 @@ int main() {
               if (range >= 0)
               {
                 if (!forward[check_lane].is_valid || range < forward[check_lane].range) {
+                  forward[check_lane].id = id;
                   forward[check_lane].is_valid = true;
                   forward[check_lane].speed = check_speed * 2.24;
                   forward[check_lane].s = check_car_s;
@@ -331,7 +333,8 @@ int main() {
               }
               else 
               {
-                if (!behind[check_lane].is_valid || range < behind[check_lane].range) {
+                if (!behind[check_lane].is_valid || range > behind[check_lane].range) {
+                  behind[check_lane].id = id;
                   behind[check_lane].is_valid = true;
                   behind[check_lane].speed = check_speed * 2.24;
                   behind[check_lane].s = check_car_s;
@@ -365,7 +368,7 @@ int main() {
                 if (forward[lane-1].is_valid && forward[lane-1].range < 15) {
                   costs[1] = 1.0; // too close to change.
                 }
-                else if (behind[lane-1].is_valid && abs(behind[lane-1].range) < 25) {
+                else if (behind[lane-1].is_valid && abs(behind[lane-1].range) < 20) {
                   costs[1] = 1.0; // too close to change.
                 }
                 else 
@@ -386,7 +389,7 @@ int main() {
                 if (forward[lane+1].is_valid && forward[lane+1].range < 15) {
                   costs[2] = 1.0; // too close to change.
                 }
-                else if (behind[lane+1].is_valid && abs(behind[lane+1].range) < 30) {
+                else if (behind[lane+1].is_valid && abs(behind[lane+1].range) < 20) {
                   costs[2] = 1.0; // too close to change.
                 }
                 else
@@ -403,26 +406,36 @@ int main() {
                 if (costs[i] < costs[choice]) choice = i;
               }
 
-              for (int i = 0; i < 3; ++i) 
-                cout << left << setw(10) << setfill(' ') << costs[i];
-              cout << endl;
-
               switch(choice) 
               {
                 case 0:   // keep_lane
-                  cout << "KEEP_LANE\n\n";
-                  ref_vel -= min(MAX_ACCEL, ref_vel-forward[0].speed);
+                {
+                  double speed_change = MAX_ACCEL;
+
+                  if (forward[lane].speed < ref_vel) {
+                    if (forward[lane].range >= 20)
+                      speed_change = min(MAX_ACCEL, abs(ref_vel-forward[lane].speed));
+                  }
+                  else {
+                    if (forward[lane].range >= 20) {
+                      speed_change = max(-MAX_ACCEL, -abs(ref_vel-forward[lane].speed));
+                    }
+                  }
+
+                  ref_vel -= speed_change;
+                  cout << "KEEP_LANE\n";
                   break;
+                }
 
                 case 1:   // change_left
-                  cout << "CHANGE_LEFT\n\n";
                   --lane;
+                  cout << "CHANGE_LEFT\n";
                   lane_change_count = 30;
                   break;
 
                 case 2:   // change_right
-                  cout << "CHANGE_RIGHT\n\n";
                   ++lane;
+                  cout << "CHANGE_RIGHT\n";
                   lane_change_count = 30;
                   break;
               }

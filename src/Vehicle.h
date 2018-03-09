@@ -12,6 +12,8 @@ struct Vehicle {
 
   bool is_valid;
 
+  int id;
+
   double speed, s;
   int lane;
 
