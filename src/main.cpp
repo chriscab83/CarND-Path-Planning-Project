@@ -294,14 +294,9 @@ int main() {
               car_s = end_path_s;
             }
 
-
-
 // ---------------------------------------------------------------------
-// behavior
+// prediction
 // ---------------------------------------------------------------------
-
-            // track lane change completion.
-            if (lane_change_count > 0) --lane_change_count;
 
             // reset vehicle holders for vehicles closest to ego
             for (int i = 0; i < 3; ++i) {
@@ -349,6 +344,13 @@ int main() {
                 }
               }
             }
+
+// ---------------------------------------------------------------------
+// behavior
+// ---------------------------------------------------------------------
+
+            // track lane change completion.
+            if (lane_change_count > 0) --lane_change_count;
 
             // clear lane, drive max speed
             if (!forward[lane].is_valid || forward[lane].range > 30) 
